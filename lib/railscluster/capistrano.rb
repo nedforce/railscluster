@@ -80,7 +80,7 @@ Capistrano::Configuration.instance(:must_exist).load do
   # Deploy settings
   set :deploy_via,      :copy
   set :copy_strategy,   :export
-  set :copy_exclude,    [".git", "test", "spec", "log", "design", "doc"]
+  set :copy_exclude,    ['.git', 'test', 'spec', 'features', 'log', 'doc', 'design']
   set :keep_releases,   3
 
   # Setup shared dirs
