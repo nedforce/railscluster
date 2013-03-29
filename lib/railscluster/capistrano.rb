@@ -46,6 +46,13 @@ Capistrano::Configuration::Actions::Invocation.class_eval do
   end
 end
 
+Capistrano::Logger.add_formatter({
+  :match    => /(.* bash -lc ')|('  && setfacl -b .*)/,
+  :replace  => "",
+  :level    => 2,
+  :priority => 5
+})
+
 Capistrano::Configuration.instance(:must_exist).load do
   # Load dependencies
   require 'bundler/capistrano'
@@ -85,7 +92,8 @@ Capistrano::Configuration.instance(:must_exist).load do
   after "deploy:restart", "deploy:cleanup"
   after "deploy:setup", "configure:database", "configure:ssh_config"
 
-  task :test_ssh do
+  task :test_env do
+    p Capistrano::Logger.sorted_formatters
     run "whoami && whoami && echo $PATH && echo $SSH_AUTH_SOCK"
   end
 
@@ -110,11 +118,10 @@ Capistrano::Configuration.instance(:must_exist).load do
       desc 'Run the precompile task locally and sync with shared'
       task :precompile, :roles => :web, :except => { :no_release => true } do
         run_locally "bundle exec rake assets:precompile"
-        run_locally "cd public; tar -zcvf assets.tar.gz assets"
+        run_locally "cd public && tar -zcf assets.tar.gz assets"
         top.upload "public/assets.tar.gz", "#{shared_path}/assets.tar.gz", :via => :scp
-        run "cd #{shared_path} && tar --no-same-permissions -zxvf assets.tar.gz"
-        run_locally "rm public/assets.tar.gz"
-        run_locally "rm -rf public/assets"    
+        run "cd #{shared_path} && tar --touch --no-same-permissions -zxf assets.tar.gz"
+        run_locally "rm -rf public/assets public/assets.tar.gz"    
       end
     end 
 
@@ -168,15 +175,17 @@ Capistrano::Configuration.instance(:must_exist).load do
   namespace :configure do
     task :database do
       set(:dbpassword) { Capistrano::CLI.ui.ask("Database password: ") }
-      database_yml = <<-EOF
-#{rails_env}:
-  adapter: postgresql
-  host: postgresql
-  username: #{account}
-  password: #{dbpassword}
-  database: #{account}
-EOF
-      put database_yml, "#{deploy_to}/#{shared_dir}/config/database.yml"
+      if dbpassword
+        database_yml = <<-EOF
+  #{rails_env}:
+    adapter: postgresql
+    host: postgresql
+    username: #{account}
+    password: #{dbpassword}
+    database: #{account}
+  EOF
+        put database_yml, "#{deploy_to}/#{shared_dir}/config/database.yml"
+      end
     end
 
     task :ssh_config do
