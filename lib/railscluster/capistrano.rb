@@ -1,57 +1,4 @@
-Capistrano::Configuration::Actions::FileTransfer.class_eval do
-  require 'digest/md5'
-
-  def transfer(direction, from, to, options={}, &block)
-    if dry_run
-      return logger.debug "transfering: #{[direction, from, to] * ', '}"
-    end
-    if direction == :up
-      original_to = to
-      to = "/tmp/#{Digest::MD5.hexdigest(to)}"
-    elsif direction == :down
-      original_from = from
-      from = "/tmp/#{Digest::MD5.hexdigest(from)}"
-    end
-    execute_on_servers(options) do |servers|
-      targets = servers.map { |s| sessions[s] }
-        Capistrano::Transfer.process(direction, from, to, targets, options.merge(:logger => logger), &block)
-    end
-    if direction == :up
-      run "sudo chown #{fetch(:account)}: #{to}"
-      run "sudo mv #{to} #{original_to}"
-    elsif direction == :down
-      run "sudo chown #{fetch(:account)}: #{from}"
-      run "sudo mv #{from} #{original_from}"
-    end
-  end
-end
-
-Capistrano::Configuration::Actions::Invocation.class_eval do
-  def run(cmd, options={}, &block)
-    unless cmd.include? "sudo"
-      user = fetch(:account)
-      # Use Sudo command like: sudo -i -u user -- 'cmd'
-      sudo_command = [fetch(:sudo, "sudo"), '-u', user ].compact.join(" ")
-      cmd = "#{sudo_command} bash -lc '#{cmd}' " 
-      # Wrap command to access ssh agent
-      cmd = "setfacl -m #{user}:x $(dirname \"$SSH_AUTH_SOCK\") && setfacl -m #{user}:rwx \"$SSH_AUTH_SOCK\" && #{cmd} && setfacl -b $(dirname \"$SSH_AUTH_SOCK\") && setfacl -b \"$SSH_AUTH_SOCK\""
-    end
-
-    if options[:eof].nil? && !cmd.include?(sudo)
-      options = options.merge(:eof => !block_given?)
-    end
-    block ||= self.class.default_io_proc
-    tree = Capistrano::Command::Tree.new(self) { |t| t.else(cmd, &block) }
-    run_tree(tree, options)
-  end
-end
-
-Capistrano::Logger.add_formatter({
-  :match    => /(.* bash -lc ')|('  && setfacl -b .*)/,
-  :replace  => "",
-  :level    => 2,
-  :priority => 5
-})
+require 'railscluster/capistrano_extensions'
 
 Capistrano::Configuration.instance(:must_exist).load do
   # Load dependencies
@@ -66,11 +13,11 @@ Capistrano::Configuration.instance(:must_exist).load do
 
   # Setup command env
   set :bundle_cmd,       "bundle"
-  set :whenever_command,      "#{bundle_cmd} exec whenever"
-  set :whenever_environment,  defer { rails_env }
   set :rake,            "#{bundle_cmd} exec rake"
   set :cluster_service, "cluster_service"
   set :backend,         'thin'
+  set :sphinx_enabled,    false
+  set :whenever_enabled,  false
 
   # Setup Git
   set :scm,             :git
@@ -93,9 +40,13 @@ Capistrano::Configuration.instance(:must_exist).load do
   after "deploy:setup", "configure:database", "configure:ssh_config"
 
   task :test_env do
-    p Capistrano::Logger.sorted_formatters
     run "whoami && whoami && echo $PATH && echo $SSH_AUTH_SOCK"
   end
+
+  require 'railscluster/sphinx'     if fetch(:sphinx_enabled)
+  require 'railscluster/whenever'   if fetch(:whenever_enabled)
+  require 'railscluster/console'
+  require 'railscluster/postgresql'
 
   namespace :deploy do
     task :start, :roles => :app do
@@ -126,7 +77,7 @@ Capistrano::Configuration.instance(:must_exist).load do
     end 
 
      task :setup, :except => { :no_release => true } do
-      dirs = [deploy_to, releases_path, shared_path]
+      dirs = [deploy_to, releases_path, shared_path, '~/etc', '~/tmp']
       dirs += shared_children.map do |d| 
         d = d.split("/")[0..-2].join("/") if d =~ /\.yml|\.rb/
         File.join(shared_path, d)
