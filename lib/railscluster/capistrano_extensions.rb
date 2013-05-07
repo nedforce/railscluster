@@ -29,7 +29,6 @@ end
 
 Capistrano::Configuration::Actions::Invocation.class_eval do
   def run(cmd, options={}, &block)
-    puts cmd
     cmd = sudo_wrap_command(cmd)
 
     if options[:eof].nil? && !cmd.include?(fetch(:sudo, "sudo"))

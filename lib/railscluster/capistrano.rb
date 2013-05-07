@@ -40,7 +40,7 @@ Capistrano::Configuration.instance(:must_exist).load do
   require 'railscluster/sphinx'     if File.exists?('config/sphinx.yml')
   require 'railscluster/whenever'   if File.exists?('config/schedule.rb')
   require 'railscluster/console'
-  require 'railscluster/postgresql'
+  require 'railscluster/backup'
 
   namespace :deploy do
     task :start, :roles => :app do

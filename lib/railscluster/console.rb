@@ -20,9 +20,9 @@ Capistrano::Configuration.instance(:must_exist).load do
     end
 
   # Is only going to work from Rails 4 onwards.
-  #  desc "Database console"
-  #  task :db, :roles => :app do
-  #    run_interactively "rails dbconsole #{rails_env} --include-password"
-  #  end
+    desc "Database console (Rails 4 Only)"
+    task :db, :roles => :app do
+      run_interactively "rails dbconsole #{rails_env} --include-password"
+    end
   end
 end
