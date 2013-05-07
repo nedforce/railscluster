@@ -31,7 +31,6 @@ Capistrano::Configuration.instance(:must_exist).load do
   # Setup shared dirs
   set :upload_dirs,     %w(public/uploads private/uploads)
   set :shared_children, fetch(:upload_dirs) + %w(tmp/pids config/database.yml)
-  # set :shared_config,   %w(config/database.yml)
 
   after "deploy:update_code", "deploy:migrate"
   after "deploy:restart", "deploy:cleanup"
