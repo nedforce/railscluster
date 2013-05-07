@@ -29,9 +29,10 @@ end
 
 Capistrano::Configuration::Actions::Invocation.class_eval do
   def run(cmd, options={}, &block)
+    puts cmd
     cmd = sudo_wrap_command(cmd)
 
-    if options[:eof].nil? && !cmd.include?(sudo)
+    if options[:eof].nil? && !cmd.include?(fetch(:sudo, "sudo"))
       options = options.merge(:eof => !block_given?)
     end
     block ||= self.class.default_io_proc
@@ -47,6 +48,7 @@ Capistrano::Configuration::Actions::Invocation.class_eval do
       # Wrap command to access ssh agent
       cmd = "setfacl -m #{user}:x $(dirname \"$SSH_AUTH_SOCK\") && setfacl -m #{user}:rwx \"$SSH_AUTH_SOCK\" && #{cmd} && setfacl -b $(dirname \"$SSH_AUTH_SOCK\") && setfacl -b \"$SSH_AUTH_SOCK\""
     end
+    return cmd
   end
 
 end

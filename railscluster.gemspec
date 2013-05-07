@@ -17,6 +17,5 @@ Gem::Specification.new do |gem|
   gem.test_files    = gem.files.grep(%r{^(test|spec|features)/})
   gem.require_paths = ["lib"]
   gem.add_dependency 'capistrano'
-  gem.add_dependency 'whenever'
   gem.add_dependency 'bundler'
 end

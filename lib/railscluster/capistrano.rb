@@ -16,8 +16,6 @@ Capistrano::Configuration.instance(:must_exist).load do
   set :rake,            "#{bundle_cmd} exec rake"
   set :cluster_service, "cluster_service"
   set :backend,         'thin'
-  set :sphinx_enabled,    false
-  set :whenever_enabled,  false
 
   # Setup Git
   set :scm,             :git
@@ -39,12 +37,8 @@ Capistrano::Configuration.instance(:must_exist).load do
   after "deploy:restart", "deploy:cleanup"
   after "deploy:setup", "configure:database", "configure:ssh_config"
 
-  task :test_env do
-    run "whoami && whoami && echo $PATH && echo $SSH_AUTH_SOCK"
-  end
-
-  require 'railscluster/sphinx'     if fetch(:sphinx_enabled)
-  require 'railscluster/whenever'   if fetch(:whenever_enabled)
+  require 'railscluster/sphinx'     if File.exists?('config/sphinx.yml')
+  require 'railscluster/whenever'   if File.exists?('config/schedule.rb')
   require 'railscluster/console'
   require 'railscluster/postgresql'
 
