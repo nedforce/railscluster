@@ -1,9 +1,7 @@
 require 'railscluster/capistrano_extensions'
+require 'railscluster/changed'
 
 Capistrano::Configuration.instance(:must_exist).load do
-  # Load dependencies
-  require 'bundler/capistrano'
-
   # Set login & account details
   server "ssh.railscluster.nl", :app, :web, :db, :primary => true
   default_run_options[:pty] = false
@@ -11,8 +9,6 @@ Capistrano::Configuration.instance(:must_exist).load do
   set :deploy_to,       defer { "/home/#{account}/web_root" }
 
   # Setup command env
-  set :bundle_cmd,       "bundle"
-  set :rake,            "#{bundle_cmd} exec rake"
   set :cluster_service, "cluster_service"
   set :backend,         'thin'
   set :pwd,             Dir.pwd
@@ -35,12 +31,16 @@ Capistrano::Configuration.instance(:must_exist).load do
   set :upload_dirs,     %w(public/uploads private/uploads)
   set :shared_children, fetch(:upload_dirs) + %w(tmp/pids config/database.yml)
 
-  after "deploy:update_code", "deploy:migrate"
-  after "deploy:restart", "deploy:cleanup"
-  after "deploy:setup", "configure:database", "configure:ssh_config"
+  after "deploy:update_code" do 
+    deploy.migrate if changed? ['db/schema.rb', 'db/migrate']
+  end
 
-  require 'railscluster/sphinx'     if File.exists?('config/sphinx.yml')
-  require 'railscluster/whenever'   if File.exists?('config/schedule.rb')
+  after "deploy:restart", "deploy:cleanup"
+  after "deploy:setup",   "configure:database", "configure:ssh_config"
+
+  require 'railscluster/bundler'  if File.exists?('Gemfile')
+  require 'railscluster/sphinx'   if File.exists?('config/sphinx.yml')
+  require 'railscluster/whenever' if File.exists?('config/schedule.rb')
   require 'railscluster/console'
   require 'railscluster/backup'
 
@@ -108,14 +108,6 @@ Capistrano::Configuration.instance(:must_exist).load do
         run("find #{asset_paths.join(" ")} -exec touch -t #{stamp} -- {} ';'; true",
             :env => { "TZ" => "UTC" }) if asset_paths.any?
       end
-    end
-  end
-
-  namespace :bundle do
-    # Only execute clean if you know that a rollback will not be necessary.
-    desc "Clean the current Bundler environment"
-    task :clean do
-      run "cd #{latest_release}; RAILS_ENV=#{rails_env} #{bundle_cmd} clean"
     end
   end
 

@@ -1,6 +1,11 @@
 Capistrano::Configuration.instance(:must_exist).load do
 
-  after "deploy:update_code",  "sphinx:configure", "sphinx:restart"
+  after "deploy:update_code" do
+    if changed? ['db/schema.rb', 'db/migrate', 'config/sphinx.yml']
+      sphinx.configure
+      sphinx.restart
+    end
+  
   after "deploy:setup", "sphinx:symlink"
 
   namespace :sphinx do
@@ -31,7 +36,7 @@ Capistrano::Configuration.instance(:must_exist).load do
 
     desc "Symlink sphinx config" 
     task :symlink, :roles => :app do
-      run "ln -nsf ~/web_root/current/config/sphinx.#{rails_env}.conf ~/etc/sphionx.conf"
+      run "ln -nsf ~/web_root/current/config/sphinx.#{rails_env}.conf ~/etc/sphinx.conf"
     end
   end
 end
