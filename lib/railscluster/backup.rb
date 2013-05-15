@@ -53,7 +53,7 @@ Capistrano::Configuration.instance(:must_exist).load do
         }
         
         run_locally "mkdir -p -v 'backups'"        
-        run_locally "PGPASSWORD='#{db['password']}' pg_dump -Fc --exclude-schema=public --no-owner --no-privileges -hlocalhost --port=#{local_port} -U#{db['username']} #{db['database']} -f #{file}"
+        run_locally "PGPASSWORD='#{db['password']}' pg_dump -Fc --no-owner --no-privileges -hlocalhost --port=#{local_port} -U#{db['username']} #{db['database']} -f #{file}"
 
         gateway.shutdown!
       end
