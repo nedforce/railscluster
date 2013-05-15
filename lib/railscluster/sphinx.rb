@@ -5,6 +5,7 @@ Capistrano::Configuration.instance(:must_exist).load do
       sphinx.configure
       sphinx.restart
     end
+  end
   
   after "deploy:setup", "sphinx:symlink"
 
