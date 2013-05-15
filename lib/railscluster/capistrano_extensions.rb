@@ -58,3 +58,34 @@ Capistrano::Logger.add_formatter({
   :level    => 2,
   :priority => 5
 })
+
+# require 'capistrano/recipes/deploy/scm/git'
+# module Capistrano
+#   module Deploy
+#     module SCM
+#       class Git
+#         def export(revision, destination)
+#           if true #variable(:git_enable_submodules)
+#             checkout(revision, destination) << " && rm -Rf #{destination}/.git"
+#           else
+
+#             git    = command
+#             remote = origin
+
+#             args = []
+
+#             args << "--verbose" if verbose.nil?
+#             args << "--prefix=#{destination[1..-1]}/"
+#             args << "--remote #{variable(:repository)}"
+            
+#             execute = []
+#             execute << "#{git} archive #{args.join(' ')} #{revision} | (tar -x -C / -f -)"
+
+#             execute.compact.join(" && ").gsub(/\s+/, ' ')
+            
+#           end
+#         end
+#       end
+#     end
+#   end
+# end

@@ -3,7 +3,6 @@ require 'railscluster/capistrano_extensions'
 Capistrano::Configuration.instance(:must_exist).load do
   # Load dependencies
   require 'bundler/capistrano'
-  load 'deploy/assets'
 
   # Set login & account details
   server "ssh.railscluster.nl", :app, :web, :db, :primary => true
@@ -16,16 +15,20 @@ Capistrano::Configuration.instance(:must_exist).load do
   set :rake,            "#{bundle_cmd} exec rake"
   set :cluster_service, "cluster_service"
   set :backend,         'thin'
+  set :pwd,             Dir.pwd
+  set :copy_local_tar,  '/usr/bin/gnutar' if File.exists?('/usr/bin/gnutar')
 
   # Setup Git
   set :scm,             :git
   set :scm_auth_cache,  false
+  set :git_shallow_clone, 1
   set :repository,      defer { "ssh://git@git.nedforce.nl:2222/#{application}.git" }
 
   # Deploy settings
   set :deploy_via,      :copy
   set :copy_strategy,   :export
-  set :copy_exclude,    ['.git', 'test', 'spec', 'features', 'log', 'doc', 'design']
+  set :copy_exclude,    ['.git', 'test', 'spec', 'features', 'log', 'doc', 'design', 'backup']
+  set :build_script,    "ln -nsf #{File.join(pwd, 'config', 'database.yml')} config/database.yml && bundle exec rake assets:precompile && rm config/database.yml"
   set :keep_releases,   3
 
   # Setup shared dirs
@@ -58,16 +61,16 @@ Capistrano::Configuration.instance(:must_exist).load do
      run "#{cluster_service} #{backend} restart"
     end
 
-    namespace :assets do
-      desc 'Run the precompile task locally and sync with shared'
-      task :precompile, :roles => :web, :except => { :no_release => true } do
-        run_locally "bundle exec rake assets:precompile"
-        run_locally "cd public && tar -zcf assets.tar.gz assets"
-        top.upload "public/assets.tar.gz", "#{shared_path}/assets.tar.gz", :via => :scp
-        run "cd #{shared_path} && tar --touch --no-same-permissions -zxf assets.tar.gz"
-        run_locally "rm -rf public/assets public/assets.tar.gz"    
-      end
-    end 
+    # namespace :assets do
+    #   desc 'Run the precompile task locally and sync with shared'
+    #   task :precompile, :roles => :web, :except => { :no_release => true } do
+    #     run_locally "bundle exec rake assets:precompile"
+    #     run_locally "cd public && tar -zcf assets.tar.gz assets"
+    #     top.upload "public/assets.tar.gz", "#{shared_path}/assets.tar.gz", :via => :scp
+    #     run "cd #{shared_path} && tar --touch --no-same-permissions -zxf assets.tar.gz"
+    #     run_locally "rm -rf public/assets public/assets.tar.gz"    
+    #   end
+    # end 
 
      task :setup, :except => { :no_release => true } do
       dirs = [deploy_to, releases_path, shared_path, '~/etc', '~/tmp']
@@ -99,7 +102,7 @@ Capistrano::Configuration.instance(:must_exist).load do
 
       run commands.join(' && ') if commands.any?
 
-      if fetch(:normalize_asset_timestamps, true)
+      if fetch(:normalize_asset_timestamps, false)
         stamp = Time.now.utc.strftime("%Y%m%d%H%M.%S")
         asset_paths = fetch(:public_children, %w(images stylesheets javascripts)).map { |p| "#{escaped_release}/public/#{p}" }
         run("find #{asset_paths.join(" ")} -exec touch -t #{stamp} -- {} ';'; true",
