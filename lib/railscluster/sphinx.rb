@@ -32,7 +32,7 @@ Capistrano::Configuration.instance(:must_exist).load do
 
     desc "Rebuild sphinx config" 
     task :configure, :roles => :app do
-      run "rake RAILS_ENV=#{rails_env} ts:config"
+      run "cd #{latest_release} #{rake} RAILS_ENV=#{rails_env} ts:config"
     end
 
     desc "Symlink sphinx config" 
