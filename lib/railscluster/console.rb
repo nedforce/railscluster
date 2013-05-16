@@ -9,6 +9,10 @@ Capistrano::Configuration.instance(:must_exist).load do
   end
 
   namespace :console do
+    task :default do
+      rails
+    end
+
     desc "Rails console"
     task :rails, :roles => :app do
       set(:sandbox_mode) { Capistrano::CLI.ui.ask("Start production console in sandbox mode? y/n: ") } if rails_env == 'production'

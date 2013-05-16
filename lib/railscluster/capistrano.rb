@@ -31,7 +31,7 @@ Capistrano::Configuration.instance(:must_exist).load do
   set :upload_dirs,     %w(public/uploads private/uploads)
   set :shared_children, fetch(:upload_dirs) + %w(tmp/pids config/database.yml)
 
-  after "deploy:update_code" do 
+  before "deploy:restart" do 
     deploy.migrate if changed? ['db/schema.rb', 'db/migrate']
   end
 
@@ -61,18 +61,7 @@ Capistrano::Configuration.instance(:must_exist).load do
      run "#{cluster_service} #{backend} restart"
     end
 
-    # namespace :assets do
-    #   desc 'Run the precompile task locally and sync with shared'
-    #   task :precompile, :roles => :web, :except => { :no_release => true } do
-    #     run_locally "bundle exec rake assets:precompile"
-    #     run_locally "cd public && tar -zcf assets.tar.gz assets"
-    #     top.upload "public/assets.tar.gz", "#{shared_path}/assets.tar.gz", :via => :scp
-    #     run "cd #{shared_path} && tar --touch --no-same-permissions -zxf assets.tar.gz"
-    #     run_locally "rm -rf public/assets public/assets.tar.gz"    
-    #   end
-    # end 
-
-     task :setup, :except => { :no_release => true } do
+    task :setup, :except => { :no_release => true } do
       dirs = [deploy_to, releases_path, shared_path, '~/etc', '~/tmp']
       dirs += shared_children.map do |d| 
         d = d.split("/")[0..-2].join("/") if d =~ /\.yml|\.rb/
@@ -134,6 +123,7 @@ Host *.nedforce.nl *.railscluster.nl
   Port 2222
 EOF
       put ssh_config, "#{deploy_to}/../.ssh/config"
+      #TODO: Add knownhosts
     end
   end
 end
