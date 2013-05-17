@@ -6,6 +6,10 @@ Capistrano::Configuration.instance(:must_exist).load do
       sphinx.restart
     end
   end
+
+  after "deploy:setup" do
+    run "mkdir -p #{shared_path}/index"
+  end
  
   namespace :sphinx do
     desc "Start the sphinx daemon" 
