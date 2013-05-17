@@ -1,5 +1,7 @@
 Capistrano::Configuration.instance(:must_exist).load do
 
+  set :shared_children, fetch(:shared_children) + %w(config/#{rails_env}.sphinx.conf)
+
   after "deploy:update_code" do
     if changed? ['db/schema.rb', 'db/migrate', 'config/sphinx.yml']
       sphinx.configure
@@ -7,8 +9,6 @@ Capistrano::Configuration.instance(:must_exist).load do
     end
   end
   
-  after "deploy:setup", "sphinx:symlink"
-
   namespace :sphinx do
     desc "Start the sphinx daemon" 
     task :start, :roles => :app do
@@ -32,12 +32,7 @@ Capistrano::Configuration.instance(:must_exist).load do
 
     desc "Rebuild sphinx config" 
     task :configure, :roles => :app do
-      run "cd #{latest_release} #{rake} RAILS_ENV=#{rails_env} ts:config"
-    end
-
-    desc "Symlink sphinx config" 
-    task :symlink, :roles => :app do
-      run "ln -nsf ~/web_root/current/config/sphinx.#{rails_env}.conf ~/etc/sphinx.conf"
+      run "cd #{latest_release} #{rake} RAILS_ENV=#{rails_env} ts:config && mv #{latest_release}/config/#{rails_env}.sphinx.conf #{shared_path}/config"
     end
   end
 end
