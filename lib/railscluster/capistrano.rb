@@ -64,7 +64,7 @@ Capistrano::Configuration.instance(:must_exist).load do
     task :setup, :except => { :no_release => true } do
       dirs = [deploy_to, releases_path, shared_path, '~/etc', '~/tmp']
       dirs += shared_children.map do |d| 
-        d = d.split("/")[0..-2].join("/") if d =~ /\.yml|\.rb/
+        d = d.split("/")[0..-2].join("/") if d =~ /\.yml|\.rb|\.conf/
         File.join(shared_path, d)
       end
       run "#{try_sudo} mkdir -p #{dirs.join(' ')}"
@@ -103,7 +103,7 @@ Capistrano::Configuration.instance(:must_exist).load do
   namespace :configure do
     task :database do
       set(:dbpassword) { Capistrano::CLI.ui.ask("Database password: ") }
-      if dbpassword
+      if !dbpassword.empty?
         database_yml = <<-EOF
   #{rails_env}:
     adapter: postgresql
@@ -123,7 +123,6 @@ Host *.nedforce.nl *.railscluster.nl
   Port 2222
 EOF
       put ssh_config, "#{deploy_to}/../.ssh/config"
-      #TODO: Add knownhosts
     end
   end
 end
