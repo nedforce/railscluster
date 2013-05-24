@@ -7,9 +7,9 @@ Capistrano::Configuration.instance(:must_exist).load do
       db.export
       uploads.export
     end
-    task :import do
-      db.import
-      uploads.import
+    task :restore_locally do
+      db.restore_locally
+      uploads.restore_locally
     end
     task :copy do
       db.copy
@@ -18,9 +18,24 @@ Capistrano::Configuration.instance(:must_exist).load do
 
 
     namespace :uploads do
-      task :export, :roles => :app, :only => { :primary => true } do; end
-      task :import, :roles => :app, :only => { :primary => true } do; end
-      task :copy,  :roles => :app, :only => { :primary => true } do; end
+      task :export, :roles => :app, :only => { :primary => true } do
+        filename = "#{application}.uploads.#{Time.now.to_i}.tar.gz"
+        file = "backups/#{filename}"
+        
+        run "cd #{shared_path} && tar -czf uploads.tar.gz private/uploads public/uploads"
+        get "#{shared_path}/uploads.tar.gz", file
+        run "rm #{shared_path}/uploads.tar.gz"
+      end
+
+      task :restore_locally, :roles => :app, :only => { :primary => true } do
+        filename = `ls -tr backups/*uploads* | tail -n 1`.chomp
+        run_locally "tar -xf #{filename}"
+      end
+      
+      task :copy,  :roles => :app, :only => { :primary => true } do
+        export
+        restore_locally
+      end
     end
 
     namespace :db do
@@ -39,7 +54,7 @@ Capistrano::Configuration.instance(:must_exist).load do
         db = YAML::load_file("tmp/database.yml")[rails_env]
 
         run_locally("rm #{tmp_db_yml}")
-        filename = "#{application}.dump.#{Time.now.to_i}.pgz"
+        filename = "#{application}.pgdump.#{Time.now.to_i}.pgz"
         file = "backups/#{filename}"
 
         server = find_servers_for_task(current_task).first
@@ -59,22 +74,22 @@ Capistrano::Configuration.instance(:must_exist).load do
       end
 
       desc "Import the latest backup to the local development database"
-      task :import do
-        filename = `ls -tr backups | tail -n 1`.chomp
+      task :restore_locally do
+        filename = `ls -tr backups/*pgdump* | tail -n 1`.chomp
         if filename.empty?
           logger.important "No backups found"
         else
           ddb = YAML::load_file("config/database.yml")["development"]
-          logger.debug "Loading backups/#{filename} into local development database"
+          logger.debug "Loading #{filename} into local development database"
           ENV['PGPASSWORD'] = ddb['password']
-          run_locally "pg_restore -U #{ddb['username']} -d #{ddb['database']} -c -O -hlocalhost backups/#{filename}; true" 
+          run_locally "pg_restore -U #{ddb['username']} -d #{ddb['database']} -c -O -hlocalhost #{filename}; true" 
         end
       end
 
-      desc "Backup the remote production database and import it to the local development database"
+      desc "Backup the remote production database and restore it to the local development database"
       task :copy do
         export
-        import
+        restore_locally
       end
     end
   end
