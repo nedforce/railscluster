@@ -1,5 +1,5 @@
-require 'railscluster/capistrano_extensions'
-require 'railscluster/changed'
+require 'railscluster/capistrano/capistrano_extensions'
+require 'railscluster/capistrano/changed'
 
 Capistrano::Configuration.instance(:must_exist).load do
   # Set login & account details
