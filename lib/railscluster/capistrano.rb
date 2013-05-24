@@ -38,11 +38,11 @@ Capistrano::Configuration.instance(:must_exist).load do
   after "deploy:restart", "deploy:cleanup"
   after "deploy:setup",   "configure:database", "configure:ssh_config"
 
-  require 'railscluster/bundler'  if File.exists?('Gemfile')
-  require 'railscluster/sphinx'   if File.exists?('config/sphinx.yml')
-  require 'railscluster/whenever' if File.exists?('config/schedule.rb')
-  require 'railscluster/console'
-  require 'railscluster/backup'
+  require 'railscluster/capistrano/bundler'  if File.exists?('Gemfile')
+  require 'railscluster/capistrano/sphinx'   if File.exists?('config/sphinx.yml')
+  require 'railscluster/capistrano/whenever' if File.exists?('config/schedule.rb')
+  require 'railscluster/capistrano/console'
+  require 'railscluster/capistrano/backup'
 
   namespace :deploy do
     task :start, :roles => :app do
