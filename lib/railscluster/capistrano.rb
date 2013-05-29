@@ -2,6 +2,13 @@ require 'railscluster/capistrano/capistrano_extensions'
 require 'railscluster/capistrano/changed'
 
 Capistrano::Configuration.instance(:must_exist).load do
+  require 'railscluster/capistrano/bundler'   if File.exists?('Gemfile')
+  require 'railscluster/capistrano/sphinx'    if File.exists?('config/sphinx.yml')
+  require 'railscluster/capistrano/whenever'  if File.exists?('config/schedule.rb')
+  require 'railscluster/capistrano/console'
+  require 'railscluster/capistrano/backup'
+  require 'railscluster/capistrano/git'       if fetch(:scm, :git).to_s == 'git'
+  
   # Set login & account details
   server "ssh.railscluster.nl", :app, :web, :db, :primary => true
   default_run_options[:pty] = false
@@ -24,25 +31,19 @@ Capistrano::Configuration.instance(:must_exist).load do
   set :deploy_via,      :copy
   set :copy_strategy,   :export
   set :copy_exclude,    ['.git', 'test', 'spec', 'features', 'log', 'doc', 'design', 'backup']
-  set :build_script,    "ln -nsf #{File.join(pwd, 'config', 'database.yml')} config/database.yml && bundle exec rake assets:precompile && rm config/database.yml"
+  set :build_script,    "ln -nsf #{File.join(pwd, 'config', 'database.yml')} config/database.yml && #{rake} assets:precompile && rm config/database.yml" if File.exists?('app/assets')
   set :keep_releases,   3
 
   # Setup shared dirs
   set :upload_dirs,     %w(public/uploads private/uploads)
   set :shared_children, fetch(:upload_dirs) + %w(tmp/pids config/database.yml)
 
-  before "deploy:restart" do 
+  before 'deploy:restart' do 
     deploy.migrate if changed? ['db/schema.rb', 'db/migrate']
   end
 
   after "deploy:restart", "deploy:cleanup"
   after "deploy:setup",   "configure:database", "configure:ssh_config"
-
-  require 'railscluster/capistrano/bundler'  if File.exists?('Gemfile')
-  require 'railscluster/capistrano/sphinx'   if File.exists?('config/sphinx.yml')
-  require 'railscluster/capistrano/whenever' if File.exists?('config/schedule.rb')
-  require 'railscluster/capistrano/console'
-  require 'railscluster/capistrano/backup'
 
   namespace :deploy do
     task :start, :roles => :app do
