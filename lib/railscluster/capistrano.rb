@@ -3,7 +3,7 @@ require 'railscluster/capistrano/changed'
 
 Capistrano::Configuration.instance(:must_exist).load do
   require 'railscluster/capistrano/bundler'   if File.exists?('Gemfile')
-  require 'railscluster/capistrano/sphinx'    if File.exists?('config/sphinx.yml')
+  require 'railscluster/capistrano/sphinx'    if File.exists?('config/sphinx.yml') || File.exists?('config/thinking_sphinx.yml')
   require 'railscluster/capistrano/whenever'  if File.exists?('config/schedule.rb')
   require 'railscluster/capistrano/console'
   require 'railscluster/capistrano/backup'
