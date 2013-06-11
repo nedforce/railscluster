@@ -11,29 +11,25 @@ Capistrano::Configuration::Actions::FileTransfer.class_eval do
     elsif direction == :down
       original_from = from
       from = "/tmp/#{Digest::MD5.hexdigest(from)}"
-      run "sudo cp #{original_from} #{from}"
-      run "sudo chown $USER: #{from}"
+      run "cp #{original_from} #{from} && setfacl -m $USER:r #{from}"
     end
     execute_on_servers(options) do |servers|
       targets = servers.map { |s| sessions[s] }
         Capistrano::Transfer.process(direction, from, to, targets, options.merge(:logger => logger), &block)
     end
     if direction == :up
-      run "sudo chown #{fetch(:account)}: #{to}"
-      run "sudo mv #{to} #{original_to}"
+      run "setfacl -m #{fetch(:account)}:r #{to}", :skip_sudo => true
+      run "cp #{to} #{original_to}"
+      run "rm #{to}", :skip_sudo => true
     elsif direction == :down
-      run "sudo rm #{from}"
+      run "rm #{from}"
     end
   end
 end
 
 Capistrano::Configuration::Actions::Invocation.class_eval do
   def run(cmd, options={}, &block)
-    cmd = sudo_wrap_command(cmd)
-
-    if options[:eof].nil? && !cmd.include?(fetch(:sudo, "sudo"))
-      options = options.merge(:eof => !block_given?)
-    end
+    cmd = sudo_wrap_command(cmd) unless options.delete(:skip_sudo) == true
     block ||= self.class.default_io_proc
     tree = Capistrano::Command::Tree.new(self) { |t| t.else(cmd, &block) }
     run_tree(tree, options)
@@ -45,7 +41,7 @@ Capistrano::Configuration::Actions::Invocation.class_eval do
       sudo_command = [fetch(:sudo, "sudo"), '-u', user ].compact.join(" ")
       cmd = "#{sudo_command} bash -lc '#{cmd}' " 
       # Wrap command to access ssh agent
-      cmd = "setfacl -m #{user}:x $(dirname \"$SSH_AUTH_SOCK\") && setfacl -m #{user}:rwx \"$SSH_AUTH_SOCK\" && #{cmd} && setfacl -b $(dirname \"$SSH_AUTH_SOCK\") && setfacl -b \"$SSH_AUTH_SOCK\""
+      cmd = "setfacl -m #{user}:x $(dirname \"$SSH_AUTH_SOCK\") && setfacl -m #{user}:rwx \"$SSH_AUTH_SOCK\" && #{cmd} && setfacl -x #{user} $(dirname \"$SSH_AUTH_SOCK\") && setfacl -b \"$SSH_AUTH_SOCK\""
     end
     return cmd
   end
@@ -53,7 +49,7 @@ Capistrano::Configuration::Actions::Invocation.class_eval do
 end
 
 Capistrano::Logger.add_formatter({
-  :match    => /(.* bash -lc ')|('  && setfacl -b .*)/,
+  :match    => /(.* bash -lc ')|('  && setfacl -x .*)/,
   :replace  => "",
   :level    => 2,
   :priority => 5

@@ -14,6 +14,9 @@ Capistrano::Configuration.instance(:must_exist).load do
   default_run_options[:pty] = false
   set :use_sudo,        false
   set :deploy_to,       defer { "/home/#{account}/web_root" }
+  set :account,         defer { Capistrano::CLI.ui.ask("Deploy to account: ") }
+  set :rails_env,       defer { Capistrano::CLI.ui.ask("Rails environment: ") }
+  set :application,     defer { Capistrano::CLI.ui.ask("Application (used to determine repository): ") }
 
   # Setup command env
   set :cluster_service, "cluster_service"

@@ -81,8 +81,9 @@ Capistrano::Configuration.instance(:must_exist).load do
         else
           ddb = YAML::load_file("config/database.yml")["development"]
           logger.debug "Loading #{filename} into local development database"
-          ENV['PGPASSWORD'] = ddb['password']
-          run_locally "pg_restore -U #{ddb['username']} -d #{ddb['database']} -c -O -hlocalhost #{filename}; true" 
+          ENV['PGPASSWORD'] = ddb['password'].to_s
+          user = "-U #{ddb['username']}" if ddb['username']
+          run_locally "pg_restore #{user} -d #{ddb['database']} -c -O -hlocalhost #{filename}; true" 
         end
       end
 
