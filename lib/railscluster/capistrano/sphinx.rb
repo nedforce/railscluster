@@ -1,17 +1,14 @@
 Capistrano::Configuration.instance(:must_exist).load do
 
   after "deploy:update_code" do
-    sphinx_config = File.exists?('config/sphinx.yml') ? 'config/sphinx.yml' : 'config/thinking_sphinx.yml'
-    if changed? ['db/schema.rb', 'db/migrate', sphinx_config]
-      sphinx.configure
-      sphinx.restart
-    end
+    sphinx.configure
+    sphinx.restart
   end
 
   after "deploy:setup" do
     run "mkdir -p #{shared_path}/index"
   end
- 
+
   namespace :sphinx do
     desc "Start the sphinx daemon" 
     task :start, :roles => :app do
