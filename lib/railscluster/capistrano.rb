@@ -41,7 +41,7 @@ Capistrano::Configuration.instance(:must_exist).load do
   set :upload_dirs,     %w(public/uploads private/uploads)
   set :shared_children, fetch(:upload_dirs) + %w(tmp/pids config/database.yml)
 
-  before 'deploy:restart' do 
+  after 'deploy:update_code' do 
     deploy.migrate if changed? ['db/schema.rb', 'db/migrate']
   end
 

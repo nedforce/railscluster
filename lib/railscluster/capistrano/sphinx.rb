@@ -1,6 +1,6 @@
 Capistrano::Configuration.instance(:must_exist).load do
 
-  after "deploy:update_code" do
+  before 'deploy:restart' do
     sphinx.configure
     sphinx.restart
   end
