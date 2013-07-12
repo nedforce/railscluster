@@ -12,6 +12,7 @@ Capistrano::Configuration.instance(:must_exist).load do
   # Set login & account details
   server "ssh.railscluster.nl", :app, :web, :db, :primary => true
   default_run_options[:pty] = false
+
   set :use_sudo,        false
   set :deploy_to,       defer { "/home/#{account}/web_root" }
   set :account,         defer { Capistrano::CLI.ui.ask("Deploy to account: ") }

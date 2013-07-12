@@ -10,7 +10,7 @@ Capistrano::Configuration.instance(:must_exist).load do
 
   namespace :console do
     task :default do
-      rails
+      shell
     end
 
     desc "Rails console"
@@ -27,6 +27,14 @@ Capistrano::Configuration.instance(:must_exist).load do
     desc "Database console (Rails 4 Only)"
     task :db, :roles => :app do
       run_interactively "rails dbconsole #{rails_env} --include-password"
+    end
+
+    desc "Command line shell"
+    task :shell, :roles => :app do
+      server ||= find_servers_for_task(current_task).first
+      user  = fetch(:account)
+      cmd   = "sudo su - #{account}" 
+      exec  "ssh #{server.host} -t '#{cmd}'"
     end
   end
 end
