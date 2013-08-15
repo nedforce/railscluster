@@ -36,7 +36,7 @@ Capistrano::Configuration.instance(:must_exist).load do
   set :deploy_via,      :copy
   set :copy_strategy,   :export
   set :copy_exclude,    ['.git', 'test', 'spec', 'features', 'log', 'doc', 'design', 'backup']
-  set :build_script,    "ln -nsf #{File.join(pwd, 'config', 'database.yml')} config/database.yml && RAILS_ENV=#{rails_env} #{rake} assets:precompile && rm config/database.yml" if File.exists?('app/assets')
+  set :build_script,    defer { "ln -nsf #{File.join(pwd, 'config', 'database.yml')} config/database.yml && RAILS_ENV=#{rails_env} #{rake} assets:precompile && rm config/database.yml" }if File.exists?('app/assets') 
   set :keep_releases,   3
 
   # Setup shared dirs
