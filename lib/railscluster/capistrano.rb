@@ -21,6 +21,7 @@ Capistrano::Configuration.instance(:must_exist).load do
 
   # Setup command env
   set :cluster_service, "cluster_service"
+  set :hard_restart,    true
   set :backend,         'thin'
   set :pwd,             Dir.pwd
   set :copy_local_tar,  '/usr/bin/gnutar' if File.exists?('/usr/bin/gnutar')
@@ -59,11 +60,15 @@ Capistrano::Configuration.instance(:must_exist).load do
     end
 
     task :restart, :roles => :app do
-     run "touch #{current_path}/tmp/restart.txt"
+      if hard_restart
+        run "#{cluster_service} #{backend} restart"
+      else
+        onebyone
+      end
     end
 
-    task :force_restart, :roles => :app do
-     run "#{cluster_service} #{backend} restart"
+    task :onebyone, :roles => :app do
+     run "touch #{current_path}/tmp/restart.txt"
     end
 
     task :setup, :except => { :no_release => true } do

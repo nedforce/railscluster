@@ -18,5 +18,6 @@ Gem::Specification.new do |gem|
   gem.require_paths = ["lib"]
   gem.add_dependency 'capistrano'
   gem.add_dependency 'bundler'
+  gem.add_dependency 'thin'
   # gem.add_dependency 'rake', '10.1.0'
 end
