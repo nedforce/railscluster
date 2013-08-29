@@ -18,6 +18,7 @@ Capistrano::Configuration.instance(:must_exist).load do
   set :deploy_to,       defer { "/home/#{account}/web_root" }
   set :account,         defer { Capistrano::CLI.ui.ask("Deploy to account: ") }
   set :rails_env,       defer { Capistrano::CLI.ui.ask("Rails environment: ") }
+  set :assets_env,      'production'
   set :application,     defer { Capistrano::CLI.ui.ask("Application (used to determine repository): ") }
 
   # Setup command env
@@ -37,7 +38,7 @@ Capistrano::Configuration.instance(:must_exist).load do
   set :deploy_via,      :copy
   set :copy_strategy,   :export
   set :copy_exclude,    ['.git', 'test', 'spec', 'features', 'log', 'doc', 'design', 'backup']
-  set :build_script,    defer { "ln -nsf #{File.join(pwd, 'config', 'database.yml')} config/database.yml && RAILS_ENV=#{rails_env} #{rake} assets:precompile && rm config/database.yml" }if File.exists?('app/assets') 
+  set :build_script,    defer { "ln -nsf #{File.join(pwd, 'config', 'database.yml')} config/database.yml && RAILS_ENV=#{assets_env} #{rake} assets:precompile && rm config/database.yml" }if File.exists?('app/assets') 
   set :keep_releases,   3
 
   # Setup shared dirs
