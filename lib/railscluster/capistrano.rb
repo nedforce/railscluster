@@ -9,7 +9,8 @@ Capistrano::Configuration.instance(:must_exist).load do
   require 'railscluster/capistrano/console'
   require 'railscluster/capistrano/backup'
   require 'railscluster/capistrano/git'       if fetch(:scm, :git).to_s == 'git'
-  
+  require 'airbrake/capistrano'
+
   # Set login & account details
   server "ssh.railscluster.nl", :app, :web, :db, :primary => true
   default_run_options[:pty] = false
@@ -118,11 +119,11 @@ Capistrano::Configuration.instance(:must_exist).load do
       if !dbpassword.empty?
         database_yml = <<-EOF
   #{rails_env}:
-    adapter: postgresql
-    host: postgresql
-    username: #{account}
+    adapter: #{fetch(:dbtype, 'postgresql')}
+    host: #{fetch(:dbhost, 'postgresql')}
+    username: #{fetch(:dbuser, account)}
     password: #{dbpassword}
-    database: #{account}
+    database: #{fetch(:dbname, account)}
   EOF
         put database_yml, "#{deploy_to}/#{shared_dir}/config/database.yml"
       end
