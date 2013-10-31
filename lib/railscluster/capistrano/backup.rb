@@ -18,6 +18,7 @@ Capistrano::Configuration.instance(:must_exist).load do
 
 
     namespace :uploads do
+      desc "Backup the remote uploads (public/private) to a local tar file."
       task :export, :roles => :app, :only => { :primary => true } do
         filename = "#{application}.uploads.#{Time.now.to_i}.tar.gz"
         file = "backups/#{filename}"
@@ -27,11 +28,13 @@ Capistrano::Configuration.instance(:must_exist).load do
         run "rm #{shared_path}/uploads.tar.gz"
       end
 
+      desc "Import the latest uploads backup."
       task :restore_locally, :roles => :app, :only => { :primary => true } do
         filename = `ls -tr backups/*uploads* | tail -n 1`.chomp
         run_locally "tar -xf #{filename}"
       end
       
+      desc "Backup the remote uploads (public/private) to and expand it locally"
       task :copy,  :roles => :app, :only => { :primary => true } do
         export
         restore_locally
