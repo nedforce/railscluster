@@ -1,6 +1,6 @@
 Capistrano::Configuration.instance(:must_exist).load do
 
-  after 'deploy:restart', 'sidekiq.restart'
+  after 'deploy:restart', 'sidekiq:restart'
 
   namespace :sidekiq do
     desc "Start the sidekiq daemon" 
