@@ -93,16 +93,13 @@ Capistrano::Configuration.instance(:must_exist).load do
       # mkdir -p is making sure that the directories are there for some SCM's that don't
       # save empty folders
       shared_children.map do |child|
-        c = child.shellescape
-        is_dir = child.rindex('/')
-        if is_dir then
-          commands += ["rm -rf -- #{escaped_release}/#{c}",
-                       "mkdir -p -- #{escaped_release}/#{child.slice(0..(child.rindex('/'))).shellescape}"]
-        else
-          commands << "rm -rf -- #{escaped_release}/#{c}"
+        c = child.shellescape 
+        commands << "rm -rf -- #{escaped_release}/#{c}"
+        if child =~ /\//
+          commands << "mkdir -p -- #{escaped_release}/#{child.slice(0..(child.rindex('/'))).shellescape}"
         end
         if fetch(:force_shared_children)
-          if is_dir
+          if child =~ /\./
             commands << "mkdir -p #{shared_path}/#{child}"
           else
             commands << "touch #{shared_path}/#{child}"
