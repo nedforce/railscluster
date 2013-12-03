@@ -44,7 +44,8 @@ Capistrano::Configuration.instance(:must_exist).load do
 
   # Setup shared dirs
   set :upload_dirs,     %w(public/uploads private/uploads)
-  set :shared_children, fetch(:upload_dirs) + %w(tmp/pids config/database.yml public/sitemaps)
+  set :shared_children, fetch(:upload_dirs) + %w(tmp/pids config/database.yml) + fetch(:app_shared_children, [])
+  set :force_shared_children, true
 
   after 'deploy:update_code' do 
     deploy.migrate if changed? ['db/schema.rb', 'db/migrate']
@@ -99,7 +100,12 @@ Capistrano::Configuration.instance(:must_exist).load do
         else
           commands << "rm -rf -- #{escaped_release}/#{d}"
         end
-        commands << "ln -s -- #{shared_path}/#{dir} #{escaped_release}/#{d}"
+        if fetch(:force_shared_children)
+          commands << "mkdir -p #{shared_path}/#{dir}"
+          commands << "ln -s -- #{shared_path}/#{dir} #{escaped_release}/#{d}"
+        else
+          commands << "if [ -d #{shared_path}/#{dir} ]; then ln -s -- #{shared_path}/#{dir} #{escaped_release}/#{d}; fi"
+        end
       end
 
       run commands.join(' && ') if commands.any?
