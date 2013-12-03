@@ -92,19 +92,24 @@ Capistrano::Configuration.instance(:must_exist).load do
 
       # mkdir -p is making sure that the directories are there for some SCM's that don't
       # save empty folders
-      shared_children.map do |dir|
-        d = dir.shellescape
-        if (dir.rindex('/')) then
-          commands += ["rm -rf -- #{escaped_release}/#{d}",
-                       "mkdir -p -- #{escaped_release}/#{dir.slice(0..(dir.rindex('/'))).shellescape}"]
+      shared_children.map do |child|
+        c = child.shellescape
+        is_dir = child.rindex('/')
+        if is_dir then
+          commands += ["rm -rf -- #{escaped_release}/#{c}",
+                       "mkdir -p -- #{escaped_release}/#{child.slice(0..(child.rindex('/'))).shellescape}"]
         else
-          commands << "rm -rf -- #{escaped_release}/#{d}"
+          commands << "rm -rf -- #{escaped_release}/#{c}"
         end
         if fetch(:force_shared_children)
-          commands << "mkdir -p #{shared_path}/#{dir}"
-          commands << "ln -s -- #{shared_path}/#{dir} #{escaped_release}/#{d}"
+          if is_dir
+            commands << "mkdir -p #{shared_path}/#{child}"
+          else
+            commands << "touch #{shared_path}/#{child}"
+          end
+          commands << "ln -s -- #{shared_path}/#{child} #{escaped_release}/#{c}"
         else
-          commands << "if [ -d #{shared_path}/#{dir} ]; then ln -s -- #{shared_path}/#{dir} #{escaped_release}/#{d}; fi"
+          commands << "if [ -e #{shared_path}/#{child} ]; then ln -s -- #{shared_path}/#{child} #{escaped_release}/#{c}; fi"
         end
       end
 
