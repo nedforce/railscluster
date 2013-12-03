@@ -99,7 +99,7 @@ Capistrano::Configuration.instance(:must_exist).load do
           commands << "mkdir -p -- #{escaped_release}/#{child.slice(0..(child.rindex('/'))).shellescape}"
         end
         if fetch(:force_shared_children)
-          if child =~ /\./
+          unless child =~ /\./
             commands << "mkdir -p #{shared_path}/#{child}"
           else
             commands << "touch #{shared_path}/#{child}"
