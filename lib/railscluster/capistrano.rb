@@ -9,7 +9,7 @@ Capistrano::Configuration.instance(:must_exist).load do
   require 'railscluster/capistrano/console'
   require 'railscluster/capistrano/backup'
   require 'railscluster/capistrano/git'       if fetch(:scm, :git).to_s == 'git'
-  require 'airbrake/capistrano'               unless fetch(:airbrake_enabled, true)
+  require 'airbrake/capistrano'               if fetch(:airbrake_enabled, true)
 
   # Set login & account details
   server "ssh.railscluster.nl", :app, :web, :db, :primary => true
