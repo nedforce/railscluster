@@ -1,3 +1,72 @@
+module Railscluster
+  class Database
+    def self.build config
+      case config['adapter']
+      when 'postgresql'
+        PostgresqlDatabase
+      when 'mysql2'
+        MysqlDatabase
+      else
+        raise "unsupported adapter: #{config['adapter']}"
+      end.new(config)
+    end
+
+    attr_reader :config
+    def initialize config
+      @config = config
+    end
+
+    # Backup through gateway (connects to localhost on specified forwarded local port)
+    def backup_command(local_port, application); raise('not implemented'); end
+    def find_local_backup;                       raise('not implemented'); end
+    def restore_command(filename);               raise('not implemented'); end
+  end
+
+  class PostgresqlDatabase < Database
+    def server_port
+      config['port'] || 5432
+    end
+
+    def backup_command local_port, application
+      filename = "#{application}.pgdump.#{Time.now.to_i}.pgz"
+      
+      "PGPASSWORD='#{config['password']}' pg_dump -Fc --no-owner --no-privileges -hlocalhost --port=#{local_port} -U#{config['username']} #{config['database']} -f backups/#{filename}"
+    end
+
+    def find_local_backup
+      `ls -tr backups/*pgdump* | tail -n 1`.chomp
+    end
+
+    def restore_command file
+      user = "-U #{config['username']}" if config['username']
+      password = "PGPASSWORD='#{config['password']}' " if config['password']
+      
+      "#{password}pg_restore #{user} -d #{config['database']} -c -O -hlocalhost #{file}; true" 
+    end
+  end
+
+  class MysqlDatabase < Database
+    def server_port
+      config['port'] || 3306
+    end
+
+    def backup_command local_port, application
+      filename = "#{application}.mysqldump.#{Time.now.to_i}.sql"
+
+      "mysqldump --user=#{config['username']} --password=#{config['password']} --host=localhost --port=#{local_port} --protocol=TCP #{config['database']} > backups/#{filename}"
+    end
+
+    def find_local_backup
+      `ls -tr backups/*mysqldump* | tail -n 1`.chomp
+    end
+
+    def restore_command file
+      "mysql --user=#{config['username']} --password=#{config['password']} #{config['database']} < #{file}"
+    end
+  end
+
+end
+
 Capistrano::Configuration.instance(:must_exist).load do
   namespace :backup do
     task :default do
@@ -54,39 +123,33 @@ Capistrano::Configuration.instance(:must_exist).load do
         get("#{shared_path}/config/database.yml", tmp_db_yml) #rescue logger.important "Could not load database configuration. Have you specified rails_env?" and exit
 
         # load the production settings within the database file
-        db = YAML::load_file("tmp/database.yml")[rails_env]
-
+        database = Railscluster::Database.build(YAML::load_file("tmp/database.yml")[rails_env])
         run_locally("rm #{tmp_db_yml}")
-        filename = "#{application}.pgdump.#{Time.now.to_i}.pgz"
-        file = "backups/#{filename}"
 
         server = find_servers_for_task(current_task).first
         gateway = Net::SSH::Gateway.new(server.host, nil)
-        port = db['port'] || 5432
-        local_port = gateway.open(db['host'], port)
+        local_port = gateway.open(database.config['host'], database.server_port)
 
         on_rollback {
           run_locally("rm #{tmp_db_yml}")
           gateway.shutdown!
         }
         
-        run_locally "mkdir -p -v 'backups'"        
-        run_locally "PGPASSWORD='#{db['password']}' pg_dump -Fc --no-owner --no-privileges -hlocalhost --port=#{local_port} -U#{db['username']} #{db['database']} -f #{file}"
+        run_locally "mkdir -p -v 'backups'"
+        run_locally database.backup_command(local_port, application)
 
         gateway.shutdown!
       end
 
       desc "Import the latest backup to the local development database"
       task :restore_locally do
-        filename = `ls -tr backups/*pgdump* | tail -n 1`.chomp
-        if filename.empty?
+        database = Railscluster::Database.build(YAML::load_file("config/database.yml")["development"])
+        file = database.find_local_backup
+        if file.empty?
           logger.important "No backups found"
         else
-          ddb = YAML::load_file("config/database.yml")["development"]
-          logger.debug "Loading #{filename} into local development database"
-          ENV['PGPASSWORD'] = ddb['password'].to_s
-          user = "-U #{ddb['username']}" if ddb['username']
-          run_locally "pg_restore #{user} -d #{ddb['database']} -c -O -hlocalhost #{filename}; true" 
+          logger.debug "Loading #{file} into local development database"
+          run_locally database.restore_command(file)
         end
       end
 
