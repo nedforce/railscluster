@@ -6,7 +6,7 @@ This Gem enables quick deployment to railscluster.nl hosting. We make some assum
 1. Add the gem to you Gemfile: 
 
 ```ruby
-gem 'railscluster', git: 'https://github.com/nedforce/railscluster'
+gem 'railscluster'
 ```
 
 2. Setup Capistrano with `bundle exec capify .`
