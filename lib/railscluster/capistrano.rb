@@ -1,7 +1,7 @@
-require 'railscluster/capistrano/capistrano_extensions'
 require 'railscluster/capistrano/changed'
 
 Capistrano::Configuration.instance(:must_exist).load do
+  require 'railscluster/capistrano/capistrano_extensions'
   require 'railscluster/capistrano/bundler'   if File.exists?('Gemfile')
   require 'railscluster/capistrano/sphinx'    if File.exists?('config/sphinx.yml') || File.exists?('config/thinking_sphinx.yml')
   require 'railscluster/capistrano/sidekiq'   if File.exists?('config/sidekiq.yml') || !`cat Gemfile | grep "gem 'sidekiq'"`.empty?
@@ -9,38 +9,41 @@ Capistrano::Configuration.instance(:must_exist).load do
   require 'railscluster/capistrano/console'
   require 'railscluster/capistrano/backup'
   require 'railscluster/capistrano/git'       if fetch(:scm, :git).to_s == 'git'
-  require 'airbrake/capistrano'               if fetch(:airbrake_enabled, true)
-
+  require 'airbrake/capistrano'               if fetch(:airbrake_enabled, false)
+  load 'deploy/assets'                        if File.exists?('app/assets') && !fetch(:local_precompile, false)
+  
   # Set login & account details
-  server "ssh.railscluster.nl", :app, :web, :db, :primary => true
+  server "ssh.railscluster.nl:2222", :app, :web, :db, :primary => true
+  set :ssh_options, { :forward_agent => true }
   default_run_options[:pty] = false
-
+  
   set :use_sudo,        false
-  set :deploy_to,       defer { "/home/#{account}/web_root" }
-  set :account,         defer { Capistrano::CLI.ui.ask("Deploy to account: ") }
-  set :rails_env,       defer { Capistrano::CLI.ui.ask("Rails environment: ") }
-  set :assets_env,      'production'
-  set :application,     defer { Capistrano::CLI.ui.ask("Application (used to determine repository): ") }
+  set :deploy_to,       defer { "/home/#{fetch(:account)}/web_root" }
+  set :account,         fetch(:account, defer { Capistrano::CLI.ui.ask("Deploy to account: ") })
+  set :rails_env,       defer { get_rails_env }
+  set :user,            defer { fetch(:account) }
+  set :application,     defer { fetch(:account) }
 
   # Setup command env
   set :cluster_service, "cluster_service"
-  set :hard_restart,    true
-  set :backend,         'thin'
+  set :backend,         defer { get_backend }
   set :pwd,             Dir.pwd
   set :copy_local_tar,  '/usr/bin/gnutar' if File.exists?('/usr/bin/gnutar')
 
   # Setup Git
-  set :scm,             :git
+  set :scm,             fetch(:scm, :git)
   set :scm_auth_cache,  false
   set :git_shallow_clone, 1
-  set :repository,      defer { "ssh://git@git.nedforce.nl:2222/#{application}.git" }
+  set :repository,      fetch(:repository, defer { Capistrano::CLI.ui.ask("Repository: ") })
 
   # Deploy settings
   set :deploy_via,      :copy
   set :copy_strategy,   :export
   set :copy_exclude,    ['.git', 'test', 'spec', 'features', 'log', 'doc', 'design', 'backup']
-  set :build_script,    defer { "ln -nsf #{File.join(pwd, 'config', 'database.yml')} config/database.yml && RAILS_ENV=#{assets_env} #{rake} assets:precompile && rm config/database.yml" }if File.exists?('app/assets') 
   set :keep_releases,   3
+
+  # Local precompile (Optional)
+  set :build_script,    defer { "ln -nsf #{File.join(pwd, 'config', 'database.yml')} config/database.yml && RAILS_ENV=#{rails_env} #{rake} assets:precompile && rm config/database.yml" } if File.exists?('app/assets') && fetch(:local_precompile, false)
 
   # Setup shared dirs
   set :upload_dirs,     %w(public/uploads private/uploads)
@@ -51,7 +54,7 @@ Capistrano::Configuration.instance(:must_exist).load do
   end
 
   after "deploy:restart", "deploy:cleanup"
-  after "deploy:setup",   "configure:database", "configure:ssh_config"
+  after "deploy:setup",   "configure:database"
 
   namespace :deploy do
     task :start, :roles => :app do
@@ -63,7 +66,7 @@ Capistrano::Configuration.instance(:must_exist).load do
     end
 
     task :restart, :roles => :app do
-      if hard_restart
+      if fetch(:hard_restart, true)
         run "#{cluster_service} #{backend} restart"
       else
         onebyone
@@ -118,22 +121,13 @@ Capistrano::Configuration.instance(:must_exist).load do
         database_yml = <<-EOF
   #{rails_env}:
     adapter: #{fetch(:dbtype, 'postgresql')}
-    host: #{fetch(:dbhost, 'postgresql')}
+    host: #{fetch(:dbtype, 'postgresql')}
     username: #{fetch(:dbuser, account)}
     password: #{dbpassword}
     database: #{fetch(:dbname, account)}
   EOF
         put database_yml, "#{deploy_to}/#{shared_dir}/config/database.yml"
       end
-    end
-
-    task :ssh_config do
-      run "mkdir -p #{deploy_to}/../.ssh && chmod 700 #{deploy_to}/../.ssh"
-      ssh_config = <<-EOF
-Host *.nedforce.nl *.railscluster.nl
-  Port 2222
-EOF
-      put ssh_config, "#{deploy_to}/../.ssh/config"
     end
   end
 end
