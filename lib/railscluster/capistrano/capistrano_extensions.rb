@@ -1,10 +1,10 @@
 Capistrano::Configuration::Actions::Invocation.class_eval do
   def get_rails_env
-    capture 'echo $RAILS_ENV'
+    capture('echo $RAILS_ENV').strip
   end
 
   def get_backend
-    capture 'echo $RAILS_BACKEND'
+    capture('echo $RAILS_BACKEND').strip
   end
 end
 
