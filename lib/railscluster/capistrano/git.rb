@@ -10,7 +10,7 @@ Capistrano::Configuration.instance(:must_exist).load do
       menu.prompt = "Select a branch/tag [default: #{menu.default}]:"
     end
   end
-  
+
   task :deployed_version do
     tag = `git describe --all #{latest_revision} 2> /dev/null`
     if tag.empty?

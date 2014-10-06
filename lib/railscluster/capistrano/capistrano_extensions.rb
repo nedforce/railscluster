@@ -60,6 +60,11 @@ module Capistrano
   module Deploy
     module SCM
       class Git
+
+        def query_revision(revision)
+          return revision
+        end
+
         def export(revision, destination)
           if variable(:git_enable_submodules) || !variable(:repository).include?('git.nedforce.nl')
             checkout(revision, destination) << " && rm -Rf #{destination}/.git"
@@ -72,7 +77,7 @@ module Capistrano
             args << "--verbose" if verbose.nil?
             args << "--prefix=#{destination[1..-1]}/"
             args << "--remote #{variable(:repository)}"
-            
+
             execute = []
             execute << "#{git} archive #{args.join(' ')} #{revision} | (tar -x -C / -f -)"
 
