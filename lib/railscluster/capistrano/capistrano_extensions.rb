@@ -39,7 +39,7 @@ Capistrano::Configuration::Actions::Invocation.class_eval do
     unless cmd.include? "sudo"
       user = fetch(:account)
       sudo_command = [fetch(:sudo, "sudo"), '-u', user ].compact.join(" ")
-      cmd = "#{sudo_command} bash -lc '#{cmd}' " 
+      cmd = "#{sudo_command} bash -lc '#{cmd}' "
       # Wrap command to access ssh agent
       cmd = "setfacl -m #{user}:x $(dirname \"$SSH_AUTH_SOCK\") && setfacl -m #{user}:rwx \"$SSH_AUTH_SOCK\" && #{cmd} && setfacl -x #{user} $(dirname \"$SSH_AUTH_SOCK\") && setfacl -b \"$SSH_AUTH_SOCK\""
     end
@@ -62,7 +62,8 @@ module Capistrano
       class Git
 
         def query_revision(revision)
-          return revision
+          command = scm('rev-parse --revs-only', revision)
+          yield(command).to_s.strip
         end
 
         def export(revision, destination)
