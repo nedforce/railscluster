@@ -62,7 +62,7 @@ module Capistrano
       class Git
 
         def query_revision(revision)
-          command = scm('rev-parse --revs-only', revision)
+          command = scm('rev-parse --revs-only', "origin/#{revision}")
           yield(command).to_s.strip
         end
 
