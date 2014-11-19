@@ -1,4 +1,9 @@
 Capistrano::Configuration.instance(:must_exist).load do
+
+  # set :real_revision do
+  #   source.local.query_real_revision(revision) { |cmd| with_env("LC_ALL", "C") { run_locally(cmd) } }
+  # end
+
   set :branch do
     tags  = `git ls-remote --tags | awk -F/ '$NF !~ /[\}]$/ {print $NF}'`.split("\n")
     heads = `git ls-remote --heads | awk -F/ '{print $NF}'`.split("\n")

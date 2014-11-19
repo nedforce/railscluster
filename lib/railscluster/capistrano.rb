@@ -39,14 +39,14 @@ Capistrano::Configuration.instance(:must_exist).load do
   set :deploy_via,      :copy
   set :copy_strategy,   :export
   set :copy_exclude,    ['.git', 'test', 'spec', 'features', 'log', 'doc', 'design', 'backup']
-  set :build_script,    defer { "ln -nsf #{File.join(pwd, 'config', 'database.yml')} config/database.yml && RAILS_ENV=#{assets_env} #{rake} assets:precompile && rm config/database.yml" }if File.exists?('app/assets') 
+  set :build_script,    defer { "ln -nsf #{File.join(pwd, 'config', 'database.yml')} config/database.yml && mkdir log && RAILS_ENV=#{assets_env} #{rake} assets:precompile && rm -rf config/database.yml log" }if File.exists?('app/assets')
   set :keep_releases,   3
 
   # Setup shared dirs
   set :upload_dirs,     %w(public/uploads private/uploads)
-  set :shared_children, defer { fetch(:upload_dirs) + %w(tmp/pids config/database.yml) + fetch(:app_shared_children, []) }
+  set :shared_children, defer { fetch(:upload_dirs) + %w(log tmp/pids config/database.yml) + fetch(:app_shared_children, []) }
 
-  after 'deploy:update_code' do 
+  after 'deploy:update_code' do
     deploy.migrate
   end
 
@@ -76,7 +76,7 @@ Capistrano::Configuration.instance(:must_exist).load do
 
     task :setup, :except => { :no_release => true } do
       dirs = [deploy_to, releases_path, shared_path, '~/etc', '~/tmp']
-      dirs += shared_children.map do |d| 
+      dirs += shared_children.map do |d|
         d = d.split("/")[0..-2].join("/") if d =~ /\.yml|\.rb|\.conf/
         File.join(shared_path, d)
       end
@@ -92,7 +92,7 @@ Capistrano::Configuration.instance(:must_exist).load do
       # mkdir -p is making sure that the directories are there for some SCM's that don't
       # save empty folders
       shared_children.map do |child|
-        c = child.shellescape 
+        c = child.shellescape
         commands << "rm -rf -- #{escaped_release}/#{c}"
         if child =~ /\//
           commands << "mkdir -p -- #{escaped_release}/#{child.slice(0..(child.rindex('/'))).shellescape}"

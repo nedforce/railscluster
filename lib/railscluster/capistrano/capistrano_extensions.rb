@@ -61,9 +61,13 @@ module Capistrano
     module SCM
       class Git
 
-        def query_revision(revision)
-          command = scm('rev-parse --revs-only', "origin/#{revision}")
+        def real_revision(rev)
+          command = scm('rev-parse --revs-only', "origin/#{rev}")
           yield(command).to_s.strip
+        end
+
+        def query_revision(rev)
+          rev
         end
 
         def export(revision, destination)
@@ -83,6 +87,22 @@ module Capistrano
             execute << "#{git} archive #{args.join(' ')} #{revision} | (tar -x -C / -f -)"
 
             execute.compact.join(" && ").gsub(/\s+/, ' ')
+          end
+        end
+      end
+    end
+  end
+end
+
+require 'capistrano/recipes/deploy/strategy/copy'
+
+module Capistrano
+  module Deploy
+    module Strategy
+      class Copy
+        def create_revision_file
+          File.open(File.join(destination, "REVISION"), "w") do |f|
+            f.puts(source.real_revision(revision) { |cmd| with_env("LC_ALL", "C") { run_locally(cmd) } } )
           end
         end
       end
