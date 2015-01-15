@@ -4,6 +4,7 @@ require 'railscluster/capistrano/changed'
 Capistrano::Configuration.instance(:must_exist).load do
   require 'railscluster/capistrano/bundler'   if File.exists?('Gemfile')
   require 'railscluster/capistrano/sphinx'    if File.exists?('config/sphinx.yml') || File.exists?('config/thinking_sphinx.yml')
+  require 'railscluster/capistrano/ferret'    if File.exists?('config/ferret.yml')
   require 'railscluster/capistrano/sidekiq'   if File.exists?('config/sidekiq.yml') || !`cat Gemfile | grep "gem 'sidekiq'"`.empty?
   require 'railscluster/capistrano/whenever'  if File.exists?('config/schedule.rb')
   require 'railscluster/capistrano/console'
@@ -43,8 +44,10 @@ Capistrano::Configuration.instance(:must_exist).load do
   set :keep_releases,   3
 
   # Setup shared dirs
+  default_dirs = %w(log tmp/pids config/database.yml)
+  default_dirs << 'index' if File.exists?('config/ferret.yml') || File.exists?('config/sphinx.yml') || File.exists?('config/thinking_sphinx.yml')
   set :upload_dirs,     %w(public/uploads private/uploads)
-  set :shared_children, defer { fetch(:upload_dirs) + %w(log tmp/pids config/database.yml) + fetch(:app_shared_children, []) }
+  set :shared_children, defer { fetch(:upload_dirs) + default_dirs + fetch(:app_shared_children, []) }
 
   after 'deploy:update_code' do
     deploy.migrate
