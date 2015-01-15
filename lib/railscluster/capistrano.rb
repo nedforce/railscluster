@@ -11,16 +11,17 @@ Capistrano::Configuration.instance(:must_exist).load do
   require 'railscluster/capistrano/git'       if fetch(:scm, :git).to_s == 'git'
   require 'airbrake/capistrano'               if fetch(:airbrake_enabled, false)
   load 'deploy/assets'                        if File.exists?('app/assets') && !fetch(:local_precompile, false)
-  
+
   # Set login & account details
   server "ssh.railscluster.nl:2222", :app, :web, :db, :primary => true
   set :ssh_options, { :forward_agent => true }
   default_run_options[:pty] = false
-  
+
   set :use_sudo,        false
   set :deploy_to,       defer { "/home/#{fetch(:account)}/web_root" }
   set :account,         fetch(:account, defer { Capistrano::CLI.ui.ask("Deploy to account: ") })
   set :rails_env,       defer { get_rails_env }
+  set :airbrake_env,    defer { fetch(:rails_env, 'production') }
   set :user,            defer { fetch(:account) }
   set :application,     defer { fetch(:account) }
 
@@ -49,7 +50,7 @@ Capistrano::Configuration.instance(:must_exist).load do
   set :upload_dirs,     %w(public/uploads private/uploads)
   set :shared_children, defer { fetch(:upload_dirs) + %w(tmp/pids config/database.yml) + fetch(:app_shared_children, []) }
 
-  after 'deploy:update_code' do 
+  after 'deploy:update_code' do
     deploy.migrate if changed? ['db/schema.rb', 'db/migrate']
   end
 
@@ -79,7 +80,7 @@ Capistrano::Configuration.instance(:must_exist).load do
 
     task :setup, :except => { :no_release => true } do
       dirs = [deploy_to, releases_path, shared_path, '~/etc', '~/tmp']
-      dirs += shared_children.map do |d| 
+      dirs += shared_children.map do |d|
         d = d.split("/")[0..-2].join("/") if d =~ /\.yml|\.rb|\.conf/
         File.join(shared_path, d)
       end
@@ -95,7 +96,7 @@ Capistrano::Configuration.instance(:must_exist).load do
       # mkdir -p is making sure that the directories are there for some SCM's that don't
       # save empty folders
       shared_children.map do |child|
-        c = child.shellescape 
+        c = child.shellescape
         commands << "rm -rf -- #{escaped_release}/#{c}"
         if child =~ /\//
           commands << "mkdir -p -- #{escaped_release}/#{child.slice(0..(child.rindex('/'))).shellescape}"
