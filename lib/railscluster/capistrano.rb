@@ -21,6 +21,7 @@ Capistrano::Configuration.instance(:must_exist).load do
   set :account,         defer { Capistrano::CLI.ui.ask("Deploy to account: ") }
   set :rails_env,       defer { Capistrano::CLI.ui.ask("Rails environment: ") }
   set :assets_env,      'production'
+  set :airbrake_env,    defer { fetch(:rails_env, 'production') }
   set :application,     defer { Capistrano::CLI.ui.ask("Application (used to determine repository): ") }
 
   # Setup command env
