@@ -63,7 +63,7 @@ module Capistrano
 
         def real_revision(rev)
           command = scm('rev-parse --revs-only', "origin/#{rev}")
-          yield(command).to_s.strip
+          "`#{command}`"
         end
 
         def query_revision(rev)
@@ -71,7 +71,7 @@ module Capistrano
         end
 
         def export(revision, destination)
-          if variable(:git_enable_submodules) || !variable(:repository).include?('git.nedforce.nl')
+          if variable(:git_enable_submodules) || !variable(:repository).include?('nedforce.nl')
             checkout(revision, destination) << " && rm -Rf #{destination}/.git"
           else
             git    = command
