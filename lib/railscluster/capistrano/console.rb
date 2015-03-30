@@ -1,11 +1,21 @@
 Capistrano::Configuration.instance(:must_exist).load do
 
   def run_interactively(cmd, server=nil)
+    sudo_cmd = fetch(:sudo_cmd, "sudo su - #{fetch(:account)}")
+    cmd = "cd #{current_path} && #{bundle_cmd} exec #{cmd}"
+    cmd = "#{sudo_cmd} -c \\\"#{cmd}\\\" "
+    exec_command cmd
+  end
+
+  def exec_command(cmd, server=nil)
     server ||= find_servers_for_task(current_task).first
-    cmd   = "cd #{current_path} && #{bundle_cmd} exec #{cmd}"
-    user  = fetch(:account)
-    cmd   = "sudo su - #{account} -c \"#{cmd}\" " 
-    exec  "ssh #{server.host} -t '#{cmd}'"
+    gateway = fetch(:gateway, nil)
+
+    if gateway
+      exec %(ssh #{gateway} -t 'ssh #{server.host} -t "#{cmd}"')
+    else
+      exec %(ssh #{server.host} -t "#{cmd}")
+    end
   end
 
   namespace :console do
@@ -31,10 +41,8 @@ Capistrano::Configuration.instance(:must_exist).load do
 
     desc "Command line shell"
     task :shell, :roles => :app do
-      server ||= find_servers_for_task(current_task).first
-      user  = fetch(:account)
-      cmd   = "sudo su - #{account}" 
-      exec  "ssh #{server.host} -t '#{cmd}'"
+      sudo_cmd = fetch(:sudo_cmd, "sudo su - #{fetch(:account)}")
+      exec_command sudo_cmd
     end
   end
 end
