@@ -38,7 +38,7 @@ Further settings have defaults that should be fine in most cases, however you ca
 ```ruby
 :hard_restart # Restart by stop-start, defaults to true. Set to false to use a one-by-one restart.
 
-:app_shared_children # Add folder and files to be symlinked into shared beyond the following defauts: tmp/pids, config/database.yml, public/uploads and private/uploads
+:app_shared_children # Add folder and files to be symlinked into shared beyond the following defaults: tmp/pids, config/database.yml, public/uploads and private/uploads
 
 :dbtype # Postgresql or Mysql, defaults to postgresql.
 
@@ -46,7 +46,7 @@ Further settings have defaults that should be fine in most cases, however you ca
 
 :local_precompile # Precompile locally, defaults to false.
 
-:airbrake_enabled # Load airbreak capistrano integration, defaults to false.
+:airbrake_enabled # Load airbrake capistrano integration, defaults to false.
 
 ```
 
