@@ -6,8 +6,8 @@ require 'railscluster/version'
 Gem::Specification.new do |gem|
   gem.name          = "railscluster"
   gem.version       = Railscluster::VERSION
-  gem.authors       = ["Arthur Holstvoogd"]
-  gem.email         = ["a.holstvoogd@nedforce.nl"]
+  gem.authors       = ['Nedforce Informatica Specialisten B.V.']
+  gem.email         = ['info@nedforce.nl']
   gem.description   = %q{Gem to ease deploying to RailsCluster}
   gem.summary       = %q{Gem to ease deploying to RailsCluster}
   gem.homepage      = "http://www.railscluster.nl"
