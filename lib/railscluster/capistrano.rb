@@ -47,8 +47,9 @@ Capistrano::Configuration.instance(:must_exist).load do
   set :build_script,    defer { "ln -nsf #{File.join(pwd, 'config', 'database.yml')} config/database.yml && RAILS_ENV=#{rails_env} #{rake} assets:precompile && rm config/database.yml" } if File.exists?('app/assets') && fetch(:local_precompile, false)
 
   # Setup shared dirs
+  default_dirs = %w(log tmp/pids config/database.yml)
   set :upload_dirs,     %w(public/uploads private/uploads)
-  set :shared_children, defer { fetch(:upload_dirs) + %w(tmp/pids config/database.yml) + fetch(:app_shared_children, []) }
+  set :shared_children, defer { fetch(:upload_dirs) + default_dirs + fetch(:app_shared_children, []) }
 
   after 'deploy:update_code' do
     deploy.migrate if changed? ['db/schema.rb', 'db/migrate']
